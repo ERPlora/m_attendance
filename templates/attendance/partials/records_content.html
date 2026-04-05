@@ -1,0 +1,329 @@
+<div x-data="attendanceRecordsApp()" class="p-4">
+    <div class="datatable datatable-bordered datatable-responsive">
+        <!-- Toolbar with filters -->
+        <div class="datatable-toolbar">
+            <div class="datatable-toolbar-start">
+                <input
+                    type="text"
+                    name="search"
+                    value="{{ search|default('') }}"
+                    placeholder="{{ _('Search by employee name...') }}"
+                    class="input input-sm datatable-search"
+                    hx-get="/m/attendance/records"
+                    hx-trigger="keyup changed delay:400ms"
+                    hx-target="#attendance-table-container"
+                    hx-include="[name='order_by'],[name='per_page'],[name='date_from'],[name='date_to'],[name='status']"
+                    hx-push-url="true">
+                <input
+                    type="date"
+                    name="date_from"
+                    value="{{ date_from|default('') }}"
+                    placeholder="{{ _('From') }}"
+                    class="input input-sm"
+                    style="width: 150px"
+                    hx-get="/m/attendance/records"
+                    hx-trigger="change"
+                    hx-target="#attendance-table-container"
+                    hx-include="[name='search'],[name='order_by'],[name='per_page'],[name='date_to'],[name='status']"
+                    hx-push-url="true">
+                <input
+                    type="date"
+                    name="date_to"
+                    value="{{ date_to|default('') }}"
+                    placeholder="{{ _('To') }}"
+                    class="input input-sm"
+                    style="width: 150px"
+                    hx-get="/m/attendance/records"
+                    hx-trigger="change"
+                    hx-target="#attendance-table-container"
+                    hx-include="[name='search'],[name='order_by'],[name='per_page'],[name='date_from'],[name='status']"
+                    hx-push-url="true">
+            </div>
+            <div class="datatable-toolbar-end">
+                <select
+                    name="status"
+                    class="select select-sm"
+                    style="width: 160px"
+                    hx-get="/m/attendance/records"
+                    hx-trigger="change"
+                    hx-target="#attendance-table-container"
+                    hx-include="[name='search'],[name='order_by'],[name='per_page'],[name='date_from'],[name='date_to']"
+                    hx-push-url="true">
+                    <option value="">{{ _("All statuses") }}</option>
+                    <option value="present" {{ 'selected' if status_filter == 'present' else '' }}>{{ _("Present") }}</option>
+                    <option value="late" {{ 'selected' if status_filter == 'late' else '' }}>{{ _("Late") }}</option>
+                    <option value="absent" {{ 'selected' if status_filter == 'absent' else '' }}>{{ _("Absent") }}</option>
+                    <option value="half_day" {{ 'selected' if status_filter == 'half_day' else '' }}>{{ _("Half Day") }}</option>
+                    <option value="remote" {{ 'selected' if status_filter == 'remote' else '' }}>{{ _("Remote") }}</option>
+                </select>
+
+                <!-- Export dropdown -->
+                <div x-data="{ open: false }" class="dropdown">
+                    <button class="btn btn-sm btn-ghost" @click="open = !open">
+                        {{ icon("download-outline", css_class="mr-1") }} {{ _("Export") }}
+                    </button>
+                    <div class="dropdown-menu" x-show="open" @click.outside="open = false" x-cloak>
+                        <a href="/m/attendance/records?export=csv" class="dropdown-item">{{ _("CSV") }}</a>
+                        <a href="/m/attendance/records?export=excel" class="dropdown-item">{{ _("Excel") }}</a>
+                    </div>
+                </div>
+
+                <!-- Add record button -->
+                <button class="btn btn-sm color-primary" @click="showAdd = true">
+                    {{ icon("add-outline", css_class="mr-1") }} {{ _("Add Record") }}
+                </button>
+            </div>
+        </div>
+
+        <!-- Table Container (HTMX updates this) -->
+        <div id="attendance-table-container">
+            {% include "attendance/partials/records_list.html" %}
+        </div>
+    </div>
+
+    <!-- Add Record Modal -->
+    <div class="modal-backdrop" x-show="showAdd" x-cloak>
+        <div class="modal" @click.outside="showAdd = false">
+            <div class="modal-header">
+                <h2 class="modal-title">{{ _("Add Attendance Record") }}</h2>
+                <button @click="showAdd = false" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body space-y-3">
+                <div>
+                    <label class="text-sm font-medium">{{ _("Employee ID") }}</label>
+                    <input type="text" class="input w-full" x-model="newRecord.employee_id" placeholder="{{ _('Employee UUID') }}">
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Employee Name") }}</label>
+                    <input type="text" class="input w-full" x-model="newRecord.employee_name" placeholder="{{ _('Full name') }}">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Clock In") }}</label>
+                        <input type="datetime-local" class="input w-full" x-model="newRecord.clock_in">
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Clock Out") }}</label>
+                        <input type="datetime-local" class="input w-full" x-model="newRecord.clock_out">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Break (minutes)") }}</label>
+                        <input type="number" class="input w-full" x-model.number="newRecord.break_minutes" min="0">
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Status") }}</label>
+                        <select class="select w-full" x-model="newRecord.status">
+                            <option value="present">{{ _("Present") }}</option>
+                            <option value="late">{{ _("Late") }}</option>
+                            <option value="absent">{{ _("Absent") }}</option>
+                            <option value="half_day">{{ _("Half Day") }}</option>
+                            <option value="remote">{{ _("Remote") }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Location") }}</label>
+                    <input type="text" class="input w-full" x-model="newRecord.location" placeholder="{{ _('Office, Remote, etc.') }}">
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Notes") }}</label>
+                    <textarea class="textarea w-full" rows="2" x-model="newRecord.notes" placeholder="{{ _('Optional notes') }}"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" @click="showAdd = false">{{ _("Cancel") }}</button>
+                <button class="btn color-primary" @click="createRecord()" :disabled="saving">
+                    <span x-show="!saving">{{ _("Create") }}</span>
+                    <span x-show="saving" class="loading loading-sm"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Record Modal -->
+    <div class="modal-backdrop" x-show="showEdit" x-cloak>
+        <div class="modal" @click.outside="showEdit = false">
+            <div class="modal-header">
+                <h2 class="modal-title">{{ _("Edit Attendance Record") }}</h2>
+                <button @click="showEdit = false" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body space-y-3">
+                <div>
+                    <label class="text-sm font-medium">{{ _("Employee Name") }}</label>
+                    <input type="text" class="input w-full" x-model="editRecord.employee_name">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Clock In") }}</label>
+                        <input type="datetime-local" class="input w-full" x-model="editRecord.clock_in">
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Clock Out") }}</label>
+                        <input type="datetime-local" class="input w-full" x-model="editRecord.clock_out">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Break (minutes)") }}</label>
+                        <input type="number" class="input w-full" x-model.number="editRecord.break_minutes" min="0">
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Status") }}</label>
+                        <select class="select w-full" x-model="editRecord.status">
+                            <option value="present">{{ _("Present") }}</option>
+                            <option value="late">{{ _("Late") }}</option>
+                            <option value="absent">{{ _("Absent") }}</option>
+                            <option value="half_day">{{ _("Half Day") }}</option>
+                            <option value="remote">{{ _("Remote") }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Location") }}</label>
+                    <input type="text" class="input w-full" x-model="editRecord.location">
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Notes") }}</label>
+                    <textarea class="textarea w-full" rows="2" x-model="editRecord.notes"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" @click="showEdit = false">{{ _("Cancel") }}</button>
+                <button class="btn color-primary" @click="updateRecord()" :disabled="saving">
+                    <span x-show="!saving">{{ _("Save") }}</span>
+                    <span x-show="saving" class="loading loading-sm"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+function attendanceRecordsApp() {
+    return {
+        showAdd: false,
+        showEdit: false,
+        saving: false,
+        editId: null,
+        selectedIds: [],
+        newRecord: {
+            employee_id: '', employee_name: '', clock_in: '', clock_out: '',
+            break_minutes: 0, status: 'present', notes: '', location: '',
+        },
+        editRecord: {
+            employee_name: '', clock_in: '', clock_out: '',
+            break_minutes: 0, status: 'present', notes: '', location: '',
+        },
+
+        async createRecord() {
+            this.saving = true;
+            try {
+                const payload = {...this.newRecord};
+                if (!payload.clock_out) delete payload.clock_out;
+                if (!payload.location) payload.location = null;
+
+                const resp = await fetch('/m/attendance/records/add', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    this.showAdd = false;
+                    this.newRecord = {
+                        employee_id: '', employee_name: '', clock_in: '', clock_out: '',
+                        break_minutes: 0, status: 'present', notes: '', location: '',
+                    };
+                    htmx.ajax('GET', '/m/attendance/records', {target: '#main-content-area'});
+                } else {
+                    htmx.trigger(document.body, 'showMessage', {level: 'error', text: data.error || 'Error'});
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        openEdit(id, name, clockIn, clockOut, breakMin, status, notes, location) {
+            this.editId = id;
+            this.editRecord = {
+                employee_name: name,
+                clock_in: clockIn,
+                clock_out: clockOut || '',
+                break_minutes: breakMin,
+                status: status,
+                notes: notes || '',
+                location: location || '',
+            };
+            this.showEdit = true;
+        },
+
+        async updateRecord() {
+            this.saving = true;
+            try {
+                const payload = {...this.editRecord};
+                if (!payload.clock_out) payload.clock_out = null;
+                if (!payload.location) payload.location = null;
+
+                const resp = await fetch(`/m/attendance/records/${this.editId}/edit`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    this.showEdit = false;
+                    htmx.ajax('GET', '/m/attendance/records', {target: '#main-content-area'});
+                } else {
+                    htmx.trigger(document.body, 'showMessage', {level: 'error', text: data.error || 'Error'});
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        async deleteRecord(id) {
+            if (!confirm('{{ _("Delete this attendance record?") }}')) return;
+            try {
+                const resp = await fetch(`/m/attendance/records/${id}/delete`, {method: 'POST'});
+                const data = await resp.json();
+                if (data.success) {
+                    htmx.ajax('GET', '/m/attendance/records', {target: '#main-content-area'});
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        },
+
+        toggleSelect(id) {
+            const idx = this.selectedIds.indexOf(id);
+            if (idx > -1) this.selectedIds.splice(idx, 1);
+            else this.selectedIds.push(id);
+        },
+
+        async bulkDelete() {
+            if (!this.selectedIds.length) return;
+            if (!confirm('{{ _("Delete selected records?") }}')) return;
+            try {
+                const resp = await fetch('/m/attendance/records/bulk', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ids: this.selectedIds}),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    this.selectedIds = [];
+                    htmx.ajax('GET', '/m/attendance/records', {target: '#main-content-area'});
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        },
+    }
+}
+</script>

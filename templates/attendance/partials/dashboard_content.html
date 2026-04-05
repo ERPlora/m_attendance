@@ -1,0 +1,167 @@
+<div class="p-4">
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="card">
+            <div class="card-body p-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-success/10 rounded-xl flex items-center justify-center">
+                        {{ icon("checkmark-circle-outline", css_class="text-2xl text-success") }}
+                    </div>
+                    <div>
+                        <div class="text-sm text-muted">{{ _("Present Today") }}</div>
+                        <div class="text-2xl font-semibold">{{ present_count }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-warning/10 rounded-xl flex items-center justify-center">
+                        {{ icon("alert-circle-outline", css_class="text-2xl text-warning") }}
+                    </div>
+                    <div>
+                        <div class="text-sm text-muted">{{ _("Late Today") }}</div>
+                        <div class="text-2xl font-semibold">{{ late_count }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-error/10 rounded-xl flex items-center justify-center">
+                        {{ icon("close-circle-outline", css_class="text-2xl text-error") }}
+                    </div>
+                    <div>
+                        <div class="text-sm text-muted">{{ _("Absent Today") }}</div>
+                        <div class="text-2xl font-semibold">{{ absent_count }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+                        {{ icon("timer-outline", css_class="text-2xl text-primary") }}
+                    </div>
+                    <div>
+                        <div class="text-sm text-muted">{{ _("Avg Hours Today") }}</div>
+                        <div class="text-2xl font-semibold">{{ avg_hours }}h</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Currently Clocked In -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">{{ _("Currently Clocked In") }}</h2>
+            </div>
+            <div class="card-body">
+                {% if clocked_in %}
+                <div class="space-y-3">
+                    {% for record in clocked_in %}
+                    <div class="flex items-center justify-between p-3 rounded-lg bg-base-100">
+                        <div>
+                            <div class="font-medium">{{ record.employee_name }}</div>
+                            <div class="text-xs text-muted">
+                                {{ _("Since") }} {{ record.clock_in|dateformat("H:i") }}
+                                {% if record.location %} &bull; {{ record.location }}{% endif %}
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="chip chip--sm chip--success">{{ _("Active") }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-muted">
+                    {{ icon("person-outline", css_class="text-5xl block mx-auto mb-2") }}
+                    <p class="mt-2">{{ _("No one clocked in yet") }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Records -->
+        <div class="card">
+            <div class="card-header">
+                <div class="flex justify-between items-center">
+                    <h2 class="card-title">{{ _("Recent Records") }}</h2>
+                    <button class="btn btn-ghost btn-sm"
+                        hx-get="/m/attendance/records"
+                        hx-target="#main-content-area"
+                        hx-push-url="true">
+                        {{ _("View all") }}
+                        {{ icon("arrow-forward-outline", css_class="ml-1") }}
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if recent_records %}
+                <div class="space-y-3">
+                    {% for record in recent_records %}
+                    <div class="flex items-center justify-between p-3 rounded-lg bg-base-100">
+                        <div>
+                            <div class="font-medium">{{ record.employee_name }}</div>
+                            <div class="text-xs text-muted">
+                                {{ record.clock_in|dateformat("d/m/Y H:i") }}
+                                {% if record.clock_out %} - {{ record.clock_out|dateformat("H:i") }}{% endif %}
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            {% if record.status == 'present' %}
+                            <span class="chip chip--sm chip--success">{{ _("Present") }}</span>
+                            {% elif record.status == 'late' %}
+                            <span class="chip chip--sm chip--warning">{{ _("Late") }}</span>
+                            {% elif record.status == 'absent' %}
+                            <span class="chip chip--sm chip--error">{{ _("Absent") }}</span>
+                            {% elif record.status == 'half_day' %}
+                            <span class="chip chip--sm chip--info">{{ _("Half Day") }}</span>
+                            {% elif record.status == 'remote' %}
+                            <span class="chip chip--sm chip--primary">{{ _("Remote") }}</span>
+                            {% endif %}
+                            {% if record.total_hours > 0 %}
+                            <div class="text-xs text-muted mt-1">{{ record.total_hours }}h</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-muted">
+                    {{ icon("time-outline", css_class="text-5xl block mx-auto mb-2") }}
+                    <p class="mt-2">{{ _("No attendance records yet") }}</p>
+                    <a href="/m/attendance/records" class="btn color-primary btn-sm mt-3">
+                        {{ _("Add first record") }}
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Week Summary -->
+    <div class="card mt-6">
+        <div class="card-header">
+            <h2 class="card-title">{{ _("This Week") }}</h2>
+        </div>
+        <div class="card-body">
+            <div class="flex items-center gap-4">
+                {{ icon("calendar-outline", css_class="text-2xl text-muted") }}
+                <div>
+                    <span class="text-2xl font-semibold">{{ records_this_week }}</span>
+                    <span class="text-muted ml-1">{{ _("records this week") }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
