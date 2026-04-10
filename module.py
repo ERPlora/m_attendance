@@ -11,7 +11,7 @@ breaks, late arrivals, and provides reporting on attendance patterns.
 # ---------------------------------------------------------------------------
 MODULE_ID = "attendance"
 MODULE_NAME = "Attendance & Clock-in"
-MODULE_VERSION = "2.0.0"
+MODULE_VERSION = "2.0.1"
 MODULE_ICON = "time-outline"
 MODULE_DESCRIPTION = "Employee attendance tracking with clock-in/out, break management, and reporting"
 MODULE_AUTHOR = "ERPlora"
