@@ -125,6 +125,20 @@ class AttendanceRecord(HubBaseModel):
     def status_label(self) -> str:
         return STATUS_LABELS.get(self.status, self.status)
 
+    async def get_employee(self, session: object) -> object | None:
+        """Return StaffMember for this record, or None if not found / staff module unavailable."""
+        try:
+            from staff.models import StaffMember  # lazy cross-module import
+        except ImportError:
+            return None
+        from sqlalchemy import select
+        stmt = select(StaffMember).where(
+            StaffMember.hub_id == self.hub_id,
+            StaffMember.id == self.employee_id,
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
     def calculate_total_hours(self) -> None:
         """Calculate total worked hours from clock_in, clock_out, and break_minutes."""
         if self.clock_in and self.clock_out:

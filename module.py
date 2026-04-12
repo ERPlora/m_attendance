@@ -11,7 +11,7 @@ breaks, late arrivals, and provides reporting on attendance patterns.
 # ---------------------------------------------------------------------------
 MODULE_ID = "attendance"
 MODULE_NAME = "Attendance & Clock-in"
-MODULE_VERSION = "2.0.2"
+MODULE_VERSION = "2.0.3"
 MODULE_ICON = "time-outline"
 MODULE_DESCRIPTION = "Employee attendance tracking with clock-in/out, break management, and reporting"
 MODULE_AUTHOR = "ERPlora"
@@ -70,6 +70,13 @@ ROLE_PERMISSIONS = {
 # Scheduled tasks
 # ---------------------------------------------------------------------------
 SCHEDULED_TASKS: list[dict] = []
+
+# ---------------------------------------------------------------------------
+# F6.C — Schedule enforcement policy
+# Controls behaviour when an employee clocks in outside business hours.
+# Values: "off" (silent), "warning" (log only), "strict" (block with 409).
+# ---------------------------------------------------------------------------
+SCHEDULE_ENFORCEMENT_POLICY: str = "warning"
 
 # ---------------------------------------------------------------------------
 # Pricing (free module)

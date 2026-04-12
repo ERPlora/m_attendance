@@ -213,6 +213,51 @@ async def record_add(
                 status_code=409,
             )
 
+        # F6.A — Validate employee exists in staff module (soft check, no hard FK).
+        try:
+            from staff.models import StaffMember
+            from sqlalchemy import select as _select
+            _stmt = _select(StaffMember).where(
+                StaffMember.hub_id == hub_id,
+                StaffMember.id == data.employee_id,
+            )
+            _emp = (await db.execute(_stmt)).scalar_one_or_none()
+            if _emp is None:
+                import logging as _logging
+                _logging.getLogger(__name__).warning(
+                    "attendance: employee_id=%s not found in staff_member (hub=%s)",
+                    data.employee_id, hub_id,
+                )
+                return JSONResponse(
+                    {"success": False, "error": "Employee not found in Staff module."},
+                    status_code=422,
+                )
+        except ImportError:
+            pass  # staff module not installed — skip validation
+
+        # F6.C — Schedule enforcement policy check.
+        try:
+            from schedules.services import is_business_hour
+            from attendance.module import SCHEDULE_ENFORCEMENT_POLICY
+            clock_when = data.clock_in if data.clock_in else datetime.now(UTC)
+            _in_hours = await is_business_hour(db, hub_id, clock_when)
+            if not _in_hours:
+                import logging as _logging
+                _policy = SCHEDULE_ENFORCEMENT_POLICY
+                if _policy == "strict":
+                    return JSONResponse(
+                        {"success": False, "error": "Clock-in outside business hours."},
+                        status_code=409,
+                    )
+                if _policy == "warning":
+                    _logging.getLogger(__name__).warning(
+                        "attendance: clock-in outside business hours: employee=%s hub=%s at=%s",
+                        data.employee_id, hub_id, clock_when,
+                    )
+                # policy == "off": silent
+        except (ImportError, AttributeError):
+            pass  # schedules module not installed or policy not set
+
         async with atomic(db) as session:
             record = AttendanceRecord(
                 hub_id=hub_id,
