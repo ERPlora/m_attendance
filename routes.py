@@ -196,6 +196,23 @@ async def record_add(
         body = await request.json()
         data = AttendanceRecordCreate(**body)
 
+        # Cross-validation: reject if employee is on approved leave.
+        # find_leave_conflicts handles ImportError internally (returns None if leave not installed).
+        from leave.services.conflict_detector import find_leave_conflicts
+        clock_date = data.clock_in.date() if data.clock_in else datetime.now(UTC).date()
+        leave_conflict = await find_leave_conflicts(db, hub_id, data.employee_id, clock_date)
+        if leave_conflict:
+            return JSONResponse(
+                {
+                    "success": False,
+                    "error": (
+                        f"Employee is on approved leave until {leave_conflict.end_date}. "
+                        "Cannot record attendance during leave."
+                    ),
+                },
+                status_code=409,
+            )
+
         async with atomic(db) as session:
             record = AttendanceRecord(
                 hub_id=hub_id,
